@@ -90,8 +90,8 @@ Il va prendre en compte le fichier inventory.yml qui est créé à l'aide du fic
 
 Avec le haproxy et le système de load-balencer on peut voir que les instances équilibres les charges en actualisant la page web front qui est la seul qui a la possibilitès d'afficher la page index.
 
-![Test Image 4](https://github.com/Erwan-sdz/Blog-IUT/blob/main/Capture%20d%E2%80%99%C3%A9cran%202023-01-12%20100714.png)
-![Test Image 4](https://github.com/Erwan-sdz/Blog-IUT/blob/main/Capture%20d%E2%80%99%C3%A9cran%202023-01-12%20100750.png)
+![Test Image 4](https://github.com/Erwan-sdz/image/blob/main/Capture%20d%E2%80%99%C3%A9cran%202023-01-12%20100714.png)
+![Test Image 4](https://github.com/Erwan-sdz/image/blob/main/Capture%20d%E2%80%99%C3%A9cran%202023-01-12%20100750.png)
 
 
 ## Exemple d'un ansible-playbook pour voir les configurations qu'il applique sur les différentes instances
