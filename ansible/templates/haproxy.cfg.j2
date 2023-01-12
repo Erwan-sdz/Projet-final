@@ -1,0 +1,93 @@
+#------------------
+# Global settings
+#------------------
+global
+    log 127.0.0.1 local0 notice # Configuration des paramètres de journalisation
+    user haproxy # Définir l'utilisateur haproxy
+    group haproxy # Définir le groupe haproxy
+    chroot  /var/lib/haproxy # Chemin pour chroot
+    daemon # Exécution en tant que démon
+    stats socket /var/lib/haproxy/stats mode 660 level operator # Configuration de la socket de statistiques 
+    maxconn 8000 # Nombre maximal de connexions
+    tune.ssl.default-dh-param   2048 # Paramètre de configuration SSL par défaut
+    pidfile /var/run/haproxy.pid # Emplacement du fichier PID
+
+#------------------
+# common defaults that all the 'listen' and 'backend' sections will
+# use- if not designated in their block
+#------------------
+defaults
+    log global # Utilisez les paramètres de journalisation globaux
+    retries 3 # Nombre de tentatives pour une connexion
+    option      redispatch # Option de redispatch
+    maxconn 8000 # Nombre maximal de connexions
+    timeout http-request 90s # Délai d'expiration de la requête HTTP
+    timeout queue 90s # Délai d'expiration de la file d'attente
+    timeout connect 90s # Délai d'expiration de la connexion
+    timeout client 90s # Délai d'expiration du client
+    timeout server 90s # Délai d'expiration du serveur
+    timeout check 90s # Délai d'expiration de la vérification
+    stats       enable # Active les statistiques
+
+#------------------
+# listen instances
+#------------------
+listen stats # Instance d'écoute pour les statistiques
+    bind 0.0.0.0:1936 # Lier l'adresse IP et le port
+    log global # Utilisez les paramètres de journalisation globaux
+    mode http # Mode HTTP
+    maxconn 10 # Nombre maximal de connexions
+    timeout client 1m # Délai d'expiration du client
+    timeout connect 1m # Délai d'expiration de la connexion
+    timeout queue 1m # Délai d'expiration de la file d'attente
+    timeout server 1m # Délai d'expiration du serveur
+    stats enable # Active les statistiques
+    stats hide-version # Masque la version
+    stats refresh 30s # Actualise les statistiques toutes les 30 secondes
+    stats show-node # Affiche le nœud
+    stats uri / # URI pour les statistiques
+
+#------------------
+# frontend instances
+#------------------
+frontend www-http # Instance de frontend pour http sur le port 80
+    bind 0.0.0.0:80 # Lier l'adresse IP et le port
+    mode http # Mode HTTP
+    default_backend default # backend par défaut
+
+#------------------
+# backend instances
+#------------------
+backend default
+    mode http 
+    balance roundrobin # Equilibrage de charge par rotation
+    {% for backend in groups.backends -%} #  Configuration des serveurs avec leur nom de domaine et leur adresse IP
+      server {{ hostvars[backend].ansible_facts.fqdn }} {{ hostvars[backend].ansible_facts.ens4.ipv4.address }} # La boucle permet de parcourir les groupes de backends et de configurer les serveurs pour chaque backend dans le groupe.
+    {% endfor -%}
+
+
+#------------------
+# Active Health Checks
+#------------------
+backend webservers
+  server sbg 192.168.23.101:80 check
+  server gra 192.168.23.1:80 check
+
+
+#------------------
+# Load-Balencer
+#------------------
+defaults
+ mode http 
+ option http-server-close # Fermeture de la connexion serveur-client
+ timeout client 20s # Temps d'attente pour les clients
+ timeout server 20s # Temps d'attente pour les serveurs
+ timeout connect 4s # Temps d'attente pour les connexions
+
+frontend www-http
+ bind 192.168.23.254:80 name app # Liaison de l'IP et du port
+ default_backend default # backend par défaut
+
+backend webservers
+  server sbg 192.168.23.101:80 check # Serveur sbg vérifié sur l'adresse IP et le port
+  server gra 192.168.23.1:80 check # Serveur gra vérifié sur l'adresse IP et le port

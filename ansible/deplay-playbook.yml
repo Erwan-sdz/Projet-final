@@ -1,0 +1,149 @@
+# Playbook Ansible pour installer et configurer une page web sur les hôtes backends
+- name: Install and configure a web page on backends
+  # Indique que les tâches suivantes s'appliquent aux hôtes du groupe backends
+  hosts: backends
+  vars:
+      # définit une variable qui sera utilisée pour personnaliser le contenu de la page web
+    helloworld: 'Mon utilisateur eductive23 : le meilleur !'
+  tasks:
+    # Mettre à jour et mettre à niveau les paquets apt
+    - name: Update and upgrade apt packages
+      apt:
+        upgrade: yes
+        update_cache: yes
+        cache_valid_time: 86400
+    # S'assurer que le paquet nginx est installé
+    - name: Ensure package nginx is installed
+      apt:
+        name: nginx
+        state: latest
+    # S'assurer que le service nginx est en cours d'exécution
+    - name: Ensure service nginx is running
+      service:
+        name: nginx
+        state: started
+    # Configurer la page de chat
+    - name: Configure Kitten Page
+      template:
+        src: templates/index.j2
+        dest: /var/www/html/index.html
+    # Configurer Nginx pour écouter sur vrack
+    - name: Configure Nginx to listen on vrack
+      template:
+        src: templates/default.j2
+        dest: /etc/nginx/sites-available/default
+      notify:
+        - Restart nginx
+  handlers:
+    - name: Restart nginx
+      service:
+        name: nginx
+        state: restarted
+- name: install Docker
+  hosts: backends
+  tasks:
+    # Installer les paquets nécessaires pour utiliser apt-transport-https
+    - name: Install apt-transport-https
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - lsb-release
+          - gnupg
+        state: latest
+        update_cache: true
+
+    # Ajouter la clé de signature pour vérifier les paquets Docker
+    - name: Add signing key
+      apt_key:
+        url: "https://download.docker.com/linux/debian/gpg"
+        state: present
+
+    # Ajouter le dépôt Docker aux sources list pour pouvoir installer les paquets depuis celui-ci
+    - name: Add repository into sources list
+      apt_repository:
+        repo: "deb https://download.docker.com/linux/debian bullseye stable"
+        state: present
+        filename: docker
+
+    # Installer les paquets Docker
+    - name: Install Docker
+      apt:
+        name:
+          - docker
+          - docker.io
+          - docker-compose-plugin
+          - docker-compose
+          - docker-registry
+        state: latest
+        update_cache: true
+
+- name: Install and configure haproxy on front
+  hosts: front
+  tasks:
+    # S'assurer que le paquet haproxy est installé
+    - name: Ensure package haproxy is installed
+      apt:
+        name: haproxy
+        state: latest
+    # S'assurer que le service haproxy est en cours d'exécution
+    - name: Ensure service haproxy is running
+      service:
+        name: haproxy
+        state: started
+    # Configurer haproxy en utilisant un modèle
+    - name: Configure haproxy
+      template:
+        src: templates/haproxy.cfg.j2
+        dest: /etc/haproxy/haproxy.cfg
+      notify:
+        - Reload haproxy
+  handlers:
+    # Redémarrer haproxy lorsque la configuration est mise à jour
+    - name: Reload haproxy
+      service:
+        name: haproxy
+        state: reloaded
+
+- name: NFS Server on front
+  hosts: front
+  tasks:
+    # Installer le paquet NFS
+    - name: Install NFS
+      apt:
+        name: nfs-kernel-server
+        state: present
+    # Créer un répertoire partagé NFS
+    - name: NFS share directory
+      file:
+        path: /home/wordpress-data/
+        state: directory
+    # Ajouter le répertoire partagé NFS aux exports
+    - name: Add NFS share to exports
+      lineinfile:
+        path: /etc/exports
+        line: "/home/wordpress-data/ 192.168.23.0/255.255.255.0(rw,no_root_squash,anonuid=1000,anongid=1000,sync)"
+        state: present
+# Installer le client NFS sur les serveurs Backends
+- name: NFS Client on backends
+  hosts: backends
+  tasks:
+    # Installer le client NFS
+    - name: Install NFS client
+      apt:
+        name: ['nfs-common','nfs-utils']
+        state: present
+    # Ajouter le partage NFS aux fichiers fstab pour le monter automatiquement au démarrage
+    - name: Add NFS share to fstab
+      lineinfile:
+        path: /etc/fstab
+        line: "192.168.23.254:/home/wordpress-data /mnt/wordpress-data nfs defaults 0 0"
+        state: present
+    # Monter le volume NFS
+    - name: Mount an NFS volume
+      ansible.posix.mount:
+        src: 192.168.23.254:/home/wordpress-data
+        path: /mnt/wordpress-data
+        opts: "vers=4.1,rw,proto=tcp"
+        state: mounted
+        fstype: nfs

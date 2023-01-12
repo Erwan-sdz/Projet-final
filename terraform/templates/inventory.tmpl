@@ -1,0 +1,18 @@
+---
+front: # groupe des hôtes front
+  hosts:
+    ${front}: # hôte front
+      ansible_user: debian # utilisateur par défaut pour se connecter à l'hôte
+      ansible_become: True # Activer l'exécution en tant qu'utilisateur privilégié 
+backends: # groupe des hôtes backend
+  hosts:
+%{ for node in sbg_backends ~} # boucle pour chaque hôte dans sbg_backends
+    ${node}: # hôte courant
+      ansible_user: debian # utilisateur par défaut pour se connecter à l'hôte
+      ansible_become: True # Activer l'exécution en tant qu'utilisateur privilégié 
+%{ endfor ~}
+%{ for node in gra_backends ~} # boucle pour chaque hôte dans gra_backends
+    ${node}: # hôte courant
+      ansible_user: debian # utilisateur par défaut pour se connecter à l'hôte
+      ansible_become: True # Activer l'exécution en tant qu'utilisateur privilégié 
+%{ endfor ~}

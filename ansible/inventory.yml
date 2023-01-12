@@ -1,0 +1,30 @@
+---
+front:
+  hosts:
+    57.128.18.175:
+      # définit l'utilisateur avec lequel se connecter
+      ansible_user: debian
+      #définit que l'on devient root 
+      ansible_become: True
+# la section backends définit les informations d'identification pour se connecter à des hôtes multiples
+backends:
+  hosts:
+    # définit les informations d'identification pour se connecter à l'hôte
+    51.68.90.216:
+      ansible_user: debian
+      ansible_become: True
+    # définit les informations d'identification pour se connecter à l'hôte
+    57.128.18.135:
+      ansible_user: debian
+      ansible_become: True
+
+
+
+
+    
+
+    
+
+
+
+    
